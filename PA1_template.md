@@ -11,6 +11,7 @@ activity <- read.csv("activity.csv")
 
 ## What is mean total number of steps taken per day?
 
+
 * First filter the data with no NAs then calculate the total number of steps taken per day.
 
 ```r
@@ -79,23 +80,127 @@ head(steps.per.day)
 ## 2012-10-07 2012-10-07 11015
 ```
 
+
 * Plot steps taken per day
 
 ```r
-library(lattice)
-xyplot(steps ~ date, data = steps.per.day, type = "l", main = "Steps Taken Each Day", scales = list(tick.number = 10))
+hist(steps.per.day$steps, breaks = seq(0, 25000, 2000), xaxt = 'n', 
+     main = "Histogram of steps taken each day")
+axis(side = 1, at = seq(0, 25000, 2000))
+
+library(ggplot2)
 ```
 
-![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3.png) 
+<img src="figure/unnamed-chunk-31.png" title="plot of chunk unnamed-chunk-3" alt="plot of chunk unnamed-chunk-3" style="display: block; margin: auto;" />
 
+```r
+qplot(x = date, y = steps, data = steps.per.day, geom = "line")
+```
+
+<img src="figure/unnamed-chunk-32.png" title="plot of chunk unnamed-chunk-3" alt="plot of chunk unnamed-chunk-3" style="display: block; margin: auto;" />
+
+
+* Calculate the mean and median total number of steps taken per day
+
+```r
+print(paste("the mean is:", mean(steps.everyday)))
+```
+
+```
+## [1] "the mean is: 10766.1886792453"
+```
+
+```r
+print(paste("the median is:", median(steps.everyday)))
+```
+
+```
+## [1] "the median is: 10765"
+```
 
 
 ## What is the average daily activity pattern?
 
+* Generate two corresponding daily pattern data frames concerning the mean and median of steps taken with respect of the time interval identifier
+
+```r
+library(reshape2)
+act.melt <- melt(activity, id = c("interval", "date"), 
+                 measure.vars = "steps")
+pattern.mean <- dcast(act.melt, interval ~ variable, mean, na.rm = T)
+pattern.median <- dcast(act.melt, interval ~ variable, median, na.rm = T)
+head(pattern.mean)
+```
+
+```
+##   interval   steps
+## 1        0 1.71698
+## 2        5 0.33962
+## 3       10 0.13208
+## 4       15 0.15094
+## 5       20 0.07547
+## 6       25 2.09434
+```
+
+```r
+head(pattern.median)
+```
+
+```
+##   interval steps
+## 1        0     0
+## 2        5     0
+## 3       10     0
+## 4       15     0
+## 5       20     0
+## 6       25     0
+```
+
+
+* Plot the two graphs
+
+```r
+ggplot(aes(x = interval, y = steps), data = pattern.mean) +
+    geom_line(color = "firebrick3")
+```
+
+<img src="figure/unnamed-chunk-61.png" title="plot of chunk unnamed-chunk-6" alt="plot of chunk unnamed-chunk-6" style="display: block; margin: auto;" />
+
+```r
+ggplot(aes(x = interval, y = steps), data = pattern.median) +
+    geom_line(color = "dodgerblue2")
+```
+
+<img src="figure/unnamed-chunk-62.png" title="plot of chunk unnamed-chunk-6" alt="plot of chunk unnamed-chunk-6" style="display: block; margin: auto;" />
+
+
+* Infer which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps.
+
+```r
+ordered.pattern <- pattern.mean[order(pattern.mean$steps, decreasing = T), ]
+head(ordered.pattern)
+```
+
+```
+##     interval steps
+## 104      835 206.2
+## 105      840 195.9
+## 107      850 183.4
+## 106      845 179.6
+## 103      830 177.3
+## 101      820 171.2
+```
+
+
+*Interval 835 contains the maximum number of steps*
 
 
 ## Imputing missing values
 
+```r
+na.number <- table(complete.cases(activity))[["FALSE"]]
+```
+*the total number of missing values in the dataset is 2304*
 
 
 ## Are there differences in activity patterns between weekdays and weekends?

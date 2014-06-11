@@ -10,6 +10,7 @@ activity <- read.csv("activity.csv")
 
 ## What is mean total number of steps taken per day?
 
+
 * First filter the data with no NAs then calculate the total number of steps taken per day.
 ```{r}
 filtered <- activity[!is.na(activity$steps), ]
@@ -26,19 +27,88 @@ names(steps.per.day) <- c("date", "steps")
 head(steps.per.day)
 ```
 
+
 * Plot steps taken per day
-```{r, fig.width = 9}
-library(lattice)
-xyplot(steps ~ date, data = steps.per.day, type = "l", main = "Steps Taken Each Day", scales = list(tick.number = 10))
+```{r, fig.width = 7, fig.height = 4, fig.align='center'}
+hist(steps.per.day$steps, breaks = seq(0, 25000, 2000), xaxt = 'n', 
+     main = "Histogram of steps taken each day")
+axis(side = 1, at = seq(0, 25000, 2000))
+
+library(ggplot2)
+qplot(x = date, y = steps, data = steps.per.day, geom = "line")
 ```
 
+
+* Calculate the mean and median total number of steps taken per day
+```{r}
+print(paste("the mean is:", mean(steps.everyday)))
+print(paste("the median is:", median(steps.everyday)))
+```
 
 
 ## What is the average daily activity pattern?
 
+* Generate two corresponding daily pattern data frames concerning the mean and median of steps taken with respect of the time interval identifier
+```{r}
+library(reshape2)
+act.melt <- melt(activity, id = c("interval", "date"), 
+                 measure.vars = "steps")
+pattern.mean <- dcast(act.melt, interval ~ variable, mean, na.rm = T)
+pattern.median <- dcast(act.melt, interval ~ variable, median, na.rm = T)
+head(pattern.mean)
+head(pattern.median)
+```
+
+
+* Plot the two graphs
+```{r, fig.width = 7, fig.height = 4, fig.align='center'}
+ggplot(aes(x = interval, y = steps), data = pattern.mean) +
+    geom_line(color = "firebrick3")
+ggplot(aes(x = interval, y = steps), data = pattern.median) +
+    geom_line(color = "dodgerblue2")
+```
+
+
+* Infer which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps.
+```{r}
+ordered.pattern <- pattern.mean[order(pattern.mean$steps, decreasing = T), ]
+head(ordered.pattern)
+```
+```{r, echo = FALSE}
+max.interval <- ordered.pattern$interval[1]
+```
+
+*Interval `r max.interval` contains the maximum number of steps*
 
 
 ## Imputing missing values
+```{r, cache = TRUE}
+na.number <- table(complete.cases(activity))[["FALSE"]]
+```
+*the total number of missing values in the dataset is `r na.number`*
+
+I'm using the mean for the particular 5-minute interval to fill in the missing value
+```{r}
+track <- 1
+for(i in activity[is.na(activity$steps), ]$interval){
+    
+    print(paste("activity$steps = ", activity[is.na(activity$steps),
+ ]$steps[track]))
+    print(paste("pattern.interval:", pattern.mean[pattern.mean$interval == i, ]$steps))
+ 
+    activity[is.na(activity$steps), ]$steps[track] <- 
+        pattern.mean[pattern.mean$interval == i, ]$steps
+ 
+    print(paste("outcome.after:",  activity[is.na(activity$steps),
+ ]$steps[track]))
+    print(paste("track before:", track))
+ 
+    track <- track + 1
+ 
+    print(paste("track after:", track))
+}
+activity[is.na(activity$steps), ]$steps <- pattern.mean
+```
 
 
 
