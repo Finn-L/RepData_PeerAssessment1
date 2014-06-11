@@ -2,10 +2,35 @@
 
 
 ## Loading and preprocessing the data
+```{r}
+activity <- read.csv("activity.csv")
+```
 
 
 
 ## What is mean total number of steps taken per day?
+
+* First filter the data with no NAs then calculate the total number of steps taken per day.
+```{r}
+filtered <- activity[!is.na(activity$steps), ]
+head(filtered)
+summary(filtered)
+str(filtered$date)
+library(lubridate)
+filtered$date <- ymd(filtered$date)
+str(filtered$date)
+steps.everyday <- sapply(split(filtered$steps, filtered$date), sum)
+uni.dates <- unique(filtered$date)
+steps.per.day <- data.frame(uni.dates, steps.everyday)
+names(steps.per.day) <- c("date", "steps")
+head(steps.per.day)
+```
+
+* Plot steps taken per day
+```{r, fig.width = 9}
+library(lattice)
+xyplot(steps ~ date, data = steps.per.day, type = "l", main = "Steps Taken Each Day", scales = list(tick.number = 10))
+```
 
 
 
