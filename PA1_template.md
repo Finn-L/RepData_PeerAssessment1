@@ -84,20 +84,19 @@ head(steps.per.day)
 * Plot steps taken per day
 
 ```r
-hist(steps.per.day$steps, breaks = seq(0, 25000, 2000), xaxt = 'n', 
+hist(steps.per.day$steps, breaks = seq(0, 25000, 2500), xaxt = 'n', 
      main = "Histogram of steps taken each day")
-axis(side = 1, at = seq(0, 25000, 2000))
-
-library(ggplot2)
+axis(side = 1, at = seq(0, 25000, 2500))
 ```
 
-<img src="figure/unnamed-chunk-31.png" title="plot of chunk unnamed-chunk-3" alt="plot of chunk unnamed-chunk-3" style="display: block; margin: auto;" />
+<img src="figure/unnamed-chunk-3.png" title="plot of chunk unnamed-chunk-3" alt="plot of chunk unnamed-chunk-3" style="display: block; margin: auto;" />
 
 ```r
+library(ggplot2)
 qplot(x = date, y = steps, data = steps.per.day, geom = "line")
 ```
 
-<img src="figure/unnamed-chunk-32.png" title="plot of chunk unnamed-chunk-3" alt="plot of chunk unnamed-chunk-3" style="display: block; margin: auto;" />
+<img src="figure/unnamed-chunk-4.png" title="plot of chunk unnamed-chunk-4" alt="plot of chunk unnamed-chunk-4" style="display: block; margin: auto;" />
 
 
 * Calculate the mean and median total number of steps taken per day
@@ -164,14 +163,14 @@ ggplot(aes(x = interval, y = steps), data = pattern.mean) +
     geom_line(color = "firebrick3")
 ```
 
-<img src="figure/unnamed-chunk-61.png" title="plot of chunk unnamed-chunk-6" alt="plot of chunk unnamed-chunk-6" style="display: block; margin: auto;" />
+<img src="figure/unnamed-chunk-71.png" title="plot of chunk unnamed-chunk-7" alt="plot of chunk unnamed-chunk-7" style="display: block; margin: auto;" />
 
 ```r
 ggplot(aes(x = interval, y = steps), data = pattern.median) +
     geom_line(color = "dodgerblue2")
 ```
 
-<img src="figure/unnamed-chunk-62.png" title="plot of chunk unnamed-chunk-6" alt="plot of chunk unnamed-chunk-6" style="display: block; margin: auto;" />
+<img src="figure/unnamed-chunk-72.png" title="plot of chunk unnamed-chunk-7" alt="plot of chunk unnamed-chunk-7" style="display: block; margin: auto;" />
 
 
 * Infer which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps.
@@ -202,5 +201,70 @@ na.number <- table(complete.cases(activity))[["FALSE"]]
 ```
 *the total number of missing values in the dataset is 2304*
 
+I'm using the mean for the particular 5-minute interval to fill in the missing value
+
+```r
+activity.full <- activity
+activity.full$date <- ymd(activity.full$date)
+indice <- which(is.na(activity.full$steps))
+for(i in 1:length(activity.full[indice, ]$steps)){
+    activity.full[indice, ]$steps[i] <- 
+        pattern.mean[pattern.mean$interval == 
+                         activity.full[indice, ]$interval[i], ]$steps
+}
+```
+* Histogram of the total number of steps taken each day
+
+```r
+full.steps.everyday <- sapply(split(activity.full$steps, 
+                                    activity.full$date), sum)
+range(full.steps.everyday)
+```
+
+```
+## [1]    41 21194
+```
+
+```r
+hist(full.steps.everyday, breaks = seq(0, 25000, 2500), xaxt="n", 
+     main = "Histogram of steps taken per day with data filled in")
+axis(1, at = seq(0, 25000, 2500))
+```
+
+<img src="figure/unnamed-chunk-12.png" title="plot of chunk unnamed-chunk-12" alt="plot of chunk unnamed-chunk-12" style="display: block; margin: auto;" />
+* Calculate the mean and median of steps taken per day
+
+```r
+ans1 <- as.character(round(mean(full.steps.everyday)))
+ans2 <- as.character(round(median(full.steps.everyday)))
+```
+*The mean is 10766. The median is 10766*
+*The relative distribution changes and the overall steps taken increases*
 
 ## Are there differences in activity patterns between weekdays and weekends?
+* Melt and cast the data then plot
+
+```r
+activity.full$dob <- tolower(weekdays(activity.full$date))
+for(i in 1:nrow(activity)){
+    if(activity.full$dob[i] == "saturday" | 
+           activity.full$dob[i] == "sunday"){
+        activity.full$week[i] <- "weekend"
+    }else{
+        activity.full$week[i] <- "weekday"
+    }
+}
+activity.full$week <- factor(activity.full$week)
+
+full.melt <- melt(activity.full, id = c("interval", "date", "week"), 
+                 measure.vars = "steps")
+new.pattern <- dcast(full.melt, interval + week ~ variable, mean)
+
+ggplot(aes(x = interval, y = steps), data = new.pattern) +
+    geom_line(aes(color = week)) + facet_wrap( ~week) +
+    theme(legend.title=element_blank(),  axis.text=element_text(size=12),
+        axis.title=element_text(size=14))
+```
+
+<img src="figure/unnamed-chunk-14.png" title="plot of chunk unnamed-chunk-14" alt="plot of chunk unnamed-chunk-14" style="display: block; margin: auto;" />
+

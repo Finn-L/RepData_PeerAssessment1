@@ -30,10 +30,11 @@ head(steps.per.day)
 
 * Plot steps taken per day
 ```{r, fig.width = 7, fig.height = 4, fig.align='center'}
-hist(steps.per.day$steps, breaks = seq(0, 25000, 2000), xaxt = 'n', 
+hist(steps.per.day$steps, breaks = seq(0, 25000, 2500), xaxt = 'n', 
      main = "Histogram of steps taken each day")
-axis(side = 1, at = seq(0, 25000, 2000))
-
+axis(side = 1, at = seq(0, 25000, 2500))
+```
+```{r, fig.width = 7, fig.height = 4, fig.align='center'}
 library(ggplot2)
 qplot(x = date, y = steps, data = steps.per.day, geom = "line")
 ```
@@ -82,34 +83,60 @@ max.interval <- ordered.pattern$interval[1]
 
 
 ## Imputing missing values
-```{r, cache = TRUE}
+```{r}
 na.number <- table(complete.cases(activity))[["FALSE"]]
 ```
 *the total number of missing values in the dataset is `r na.number`*
 
 I'm using the mean for the particular 5-minute interval to fill in the missing value
 ```{r}
-track <- 1
-for(i in activity[is.na(activity$steps), ]$interval){
-    
-    print(paste("activity$steps = ", activity[is.na(activity$steps),
- ]$steps[track]))
-    print(paste("pattern.interval:", pattern.mean[pattern.mean$interval == i, ]$steps))
- 
-    activity[is.na(activity$steps), ]$steps[track] <- 
-        pattern.mean[pattern.mean$interval == i, ]$steps
- 
-    print(paste("outcome.after:",  activity[is.na(activity$steps),
- ]$steps[track]))
-    print(paste("track before:", track))
- 
-    track <- track + 1
- 
-    print(paste("track after:", track))
+activity.full <- activity
+activity.full$date <- ymd(activity.full$date)
+indice <- which(is.na(activity.full$steps))
+for(i in 1:length(activity.full[indice, ]$steps)){
+    activity.full[indice, ]$steps[i] <- 
+        pattern.mean[pattern.mean$interval == 
+                         activity.full[indice, ]$interval[i], ]$steps
 }
-activity[is.na(activity$steps), ]$steps <- pattern.mean
 ```
-
-
+* Histogram of the total number of steps taken each day
+```{r, fig.width = 7, fig.height = 4, fig.align='center'}
+full.steps.everyday <- sapply(split(activity.full$steps, 
+                                    activity.full$date), sum)
+range(full.steps.everyday)
+hist(full.steps.everyday, breaks = seq(0, 25000, 2500), xaxt="n", 
+     main = "Histogram of steps taken per day with data filled in")
+axis(1, at = seq(0, 25000, 2500))
+```
+* Calculate the mean and median of steps taken per day
+```{r}
+ans1 <- as.character(round(mean(full.steps.everyday)))
+ans2 <- as.character(round(median(full.steps.everyday)))
+```
+*The mean is `r ans1`. The median is `r ans2`*
+*The relative distribution changes and the overall steps taken increases*
 
 ## Are there differences in activity patterns between weekdays and weekends?
+* Melt and cast the data then plot
+```{r, fig.width = 9, fig.height = 4, fig.align='center'}
+activity.full$dob <- tolower(weekdays(activity.full$date))
+for(i in 1:nrow(activity)){
+    if(activity.full$dob[i] == "saturday" | 
+           activity.full$dob[i] == "sunday"){
+        activity.full$week[i] <- "weekend"
+    }else{
+        activity.full$week[i] <- "weekday"
+    }
+}
+activity.full$week <- factor(activity.full$week)
+
+full.melt <- melt(activity.full, id = c("interval", "date", "week"), 
+                 measure.vars = "steps")
+new.pattern <- dcast(full.melt, interval + week ~ variable, mean)
+
+ggplot(aes(x = interval, y = steps), data = new.pattern) +
+    geom_line(aes(color = week)) + facet_wrap( ~week) +
+    theme(legend.title=element_blank(),  axis.text=element_text(size=12),
+        axis.title=element_text(size=14))
+```
+
